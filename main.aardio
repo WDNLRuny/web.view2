@@ -1,0 +1,154 @@
+//webview2 示例
+import console;
+import win.ui;
+import web.view2;
+import web.json;
+/*DSG{{*/
+var winform = win.form(text="webview2 Demo";right=759;bottom=469)
+winform.add(
+button={cls="button";text="打印当前页";left=593;top=323;right=723;bottom=364;z=1};
+button2={cls="button";text="下载aardio";left=593;top=390;right=723;bottom=431;z=2}
+)
+/*}}*/
+
+console.log("使用文档： https://docs.qq.com/sheet/DU1F4eXNaclZBVlph?tab=BB08J2")
+
+var userDataFolder; //自定义用户数据文件夹
+
+//固定版本运行 https://learn.microsoft.com/zh-cn/microsoft-edge/webview2/concepts/distribution#details-about-the-fixed-version-runtime-distribution-mode
+//var browserExecutableFolder="/Microsoft.WebView2.FixedVersionRuntime.109.0.1518.78.x64";
+
+var environmentOptions = {
+	//language:"en",//Web 视图的默认显示语言，适用于浏览器 UI，例如上下文菜单和对话框。它还适用于 WebView 发送到网站的 HTTP 标头
+	//additionalBrowserArguments:"--remote-debugging-port=9527",//参数作为命令行的一部分传递给浏览器进程
+	//exclusiveUserDataFolderAccess:true,//独占访问权限，一个用户文件夹不允许多开
+};
+
+var wb = web.view2(winform);
+
+wb.addWebResourceRequestedFilter("*",1);//为事件添加 URI 和资源上下文筛选器
+
+wb.addWebResourceRequested(function(arg){
+	if ( string.find(arg.request.uri,'baidu.com')){
+		// 假设上面 html 是获得了源码, 那么怎么返回内容给浏览器
+		// 下面的字段没有关于内容的.
+		import fsys.stream;
+		var fs = ..fsys.stream("123456");
+		return {
+			content: tonumber(..com.GetPointer(fs)),
+			statusCode:200,
+			reasonPhrase:"Ok",
+			headers:"Content-Type: text/html; charset=utf-8",
+		}
+	}
+})
+
+wb.addDocumentTitleChanged(function(title){
+	console.log("DocumentTitleChanged",title);
+	winform.text = title;
+});
+
+wb.addNewWindowRequested(function(uri){
+	console.log("NewWindowRequested",uri);
+	wb.navigate(uri);
+	return true;//返回 true 阻止新窗口
+});
+
+wb.addDownloadStarting(function(args){
+	
+	//args.cancel = true;//取消下载
+	//args.handled = true;//隐藏此下载的默认下载对话框
+	//args.resultFilePath = "C:\1.png";//可修改文件的路径。
+	console.log("DownloadStarting",web.json.stringify(args));
+	var downloadOperation = args.downloadOperation;
+	
+	//添加下载的字节数更改事件
+	downloadOperation.addBytesReceivedChanged(function(){
+		..console.log("BytesReceivedChanged",downloadOperation.getBytesReceived(),"/",downloadOperation.getTotalBytesToReceive());
+	})
+	
+	//添加估计结束时间更改事件
+	downloadOperation.addEstimatedEndTimeChanged(function(){
+		..console.log("EstimatedEndTimeChanged",downloadOperation.getEstimatedEndTime());
+	})
+	
+	//添加下载状态更改事件
+	downloadOperation.addStateChanged(function(){
+		var downloadState = downloadOperation.getState();
+		select( downloadState ) {
+     		case 0 {
+        		..console.log("正在下载");
+    		}
+    		case 1 {
+        		..console.log("下载中断",downloadOperation.getInterruptReason());
+    		}
+    		case 2 {
+        		..console.log("下载已完成",downloadOperation.getResultFilePath());
+    		}
+ 		}
+	});
+	
+	//downloadOperation.cancel();//取消下载
+	//downloadOperation.pause();//暂停下载
+	//downloadOperation.resume();//继续下载
+	//downloadOperation.getUri();//下载的 URI。
+	
+	return args;
+});
+//权限处理
+wb.addPermissionRequested(function(args){
+	//args.isUserInitiated;//用户发起的
+	//args.permissionKind;//权限类型
+	//args.state;//状态
+	//args.uri;//发起的网址
+	console.log("PermissionRequested",web.json.stringify(args));
+	return true;//返回 true 允许权限请求，无感知授权
+});
+
+wb.go("https://baidu.com");
+//wb.go("https://www.aardio.com/")
+
+//打开开发工具窗口
+//wb.openDevToolsWindow();
+
+import sys.printer;
+//打印设置
+var printSettings = {
+	footerUri:"自定义页脚",
+	headerTitle:"自定义标题",
+	marginBottom:0.4, //底部边距（以英寸为单位）。默认值为 1 厘米或 ~0.4 英寸。
+	marginLeft:0.4, //左边距（以英寸为单位）。默认值为 1 厘米或 ~0.4 英寸。
+	marginRight:0.4, //右边距（以英寸为单位）。默认值为 1 厘米或 ~0.4 英寸。
+	marginTop:0.4, //上边距（以英寸为单位）。默认值为 1 厘米或 ~0.4 英寸。
+	orientation:0, //方向可以是纵向或横向。
+	pageHeight:11, //页面高度（以英寸为单位）。默认高度为 11 英寸。
+	pageWidth:8.5, //页面宽度（以英寸为单位）。默认宽度为 8.5 英寸。
+	scaleFactor:1, //缩放比例是介于 0.1 和 2.0 之间的值。默认值为 1.0。
+	shouldPrintBackgrounds:true, //是否应打印背景颜色和图像。
+	shouldPrintHeaderAndFooter:true, //是否应打印页眉和页脚。
+	shouldPrintSelectionOnly:false, //只打印当前用户在文档中选择的 HTML。
+	collation:0, //打印机排序规则。
+	colorMode:0, //打印机颜色模式。
+	copies:1, //要打印的份数。最小值为 1，最大副本计数为 1999。默认值为 1。
+	duplex:0, //打印机双面打印器设置。
+	mediaSize:0, //打印机介质尺寸。
+	pageRanges:"", //要打印的页面范围。
+	pagesPerSide:1, //在一张纸上打印文档的页数。从 1、2、4、6、9 或 16 中进行选择。默认值为 1。
+	printerName:string.trim(sys.printer.default()),//要使用的打印机的名称
+};
+
+winform.button.oncommand = function(id,event){
+	//将当前网页异步打印到指定的打印机
+	console.dumpJson(printSettings)
+	wb.print(printSettings,function(errorCode, printStatus){
+		//异步操作在完成打印到打印机时调用
+		console.log("print", errorCode, printStatus);
+	});
+}
+
+winform.button2.oncommand = function(id,event){
+	wb.navigate("https://ide.update.aardio.com/releases/aardio.7z");
+}
+
+winform.show();
+win.loopMessage();
